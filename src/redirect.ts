@@ -9,6 +9,8 @@
 
 import { parse } from 'node:url'
 import encodeUrl from 'encodeurl'
+
+import type { Http2ServerRequest } from 'node:http2'
 import type { IncomingMessage } from 'node:http'
 
 import debug from './debug.js'
@@ -16,6 +18,8 @@ import type { Qs } from './qs.js'
 import type { Response } from './response.js'
 import type { Router } from './router/main.js'
 import type { MakeUrlOptions } from './types/route.js'
+
+type HttpServerRequest = IncomingMessage | Http2ServerRequest
 
 /**
  * Exposes the API to construct redirect routes
@@ -36,12 +40,12 @@ export class Redirect {
    */
   #queryString: Record<string, any> = {}
 
-  #request: IncomingMessage
+  #request: HttpServerRequest
   #response: Response
   #router: Router
   #qs: Qs
 
-  constructor(request: IncomingMessage, response: Response, router: Router, qs: Qs) {
+  constructor(request: HttpServerRequest, response: Response, router: Router, qs: Qs) {
     this.#request = request
     this.#response = response
     this.#router = router

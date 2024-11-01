@@ -11,11 +11,13 @@ import onFinished from 'on-finished'
 import Middleware from '@poppinss/middleware'
 import type { Logger } from '@adonisjs/logger'
 import type { Encryption } from '@adonisjs/encryption'
-import type { Server as HttpsServer } from 'node:https'
 import type { Application } from '@adonisjs/application'
 import type { EmitterLike } from '@adonisjs/events/types'
 import { ContainerResolver, moduleCaller, moduleImporter } from '@adonisjs/fold'
-import type { ServerResponse, IncomingMessage, Server as HttpServer } from 'node:http'
+
+import type { Server as HttpsServer } from 'node:https'
+import type { Http2SecureServer, Http2ServerRequest, Http2ServerResponse } from 'node:http2'
+import type { ServerResponse, IncomingMessage, Server as Http1Server } from 'node:http'
 
 import type { LazyImport } from '../types/base.js'
 import type { MiddlewareAsClass, ParsedGlobalMiddleware } from '../types/middleware.js'
@@ -37,6 +39,10 @@ import { finalHandler } from './factories/final_handler.js'
 import { writeResponse } from './factories/write_response.js'
 import { asyncLocalStorage } from '../http_context/local_storage.js'
 import { middlewareHandler } from './factories/middleware_handler.js'
+
+type HttpServer = Http1Server | HttpsServer | Http2SecureServer
+type HttpServerRequest = IncomingMessage | Http2ServerRequest
+type HttpServerResponse = ServerResponse | Http2ServerResponse
 
 /**
  * The HTTP server implementation to handle incoming requests and respond using the
@@ -111,7 +117,7 @@ export class Server {
   /**
    * Reference to the underlying Node HTTP server in use
    */
-  #nodeHttpServer?: HttpServer | HttpsServer
+  #nodeHttpServer?: HttpServer
 
   /**
    * Middleware store to be shared with the routes
@@ -293,7 +299,7 @@ export class Server {
   /**
    * Set the HTTP server instance used to listen for requests.
    */
-  setNodeServer(server: HttpServer | HttpsServer) {
+  setNodeServer(server: HttpServer) {
     this.#nodeHttpServer = server
   }
 
@@ -316,14 +322,14 @@ export class Server {
   /**
    * Creates an instance of the [[Request]] class
    */
-  createRequest(req: IncomingMessage, res: ServerResponse) {
+  createRequest(req: HttpServerRequest, res: HttpServerResponse) {
     return new Request(req, res, this.#encryption, this.#config, this.#qsParser)
   }
 
   /**
    * Creates an instance of the [[Response]] class
    */
-  createResponse(req: IncomingMessage, res: ServerResponse) {
+  createResponse(req: HttpServerRequest, res: HttpServerResponse) {
     return new Response(req, res, this.#encryption, this.#config, this.#router, this.#qsParser)
   }
 
@@ -342,7 +348,7 @@ export class Server {
   /**
    * Handle request
    */
-  handle(req: IncomingMessage, res: ServerResponse) {
+  handle(req: HttpServerRequest, res: HttpServerResponse) {
     /**
      * Setup for the "http:request_finished" event
      */

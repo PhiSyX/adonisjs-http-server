@@ -22,7 +22,9 @@ import { stat } from 'node:fs/promises'
 import { RuntimeException } from '@poppinss/utils'
 import contentDisposition from 'content-disposition'
 import type { Encryption } from '@adonisjs/encryption'
-import { ServerResponse, IncomingMessage, OutgoingHttpHeaders } from 'node:http'
+
+import type { Http2ServerRequest, Http2ServerResponse } from 'node:http2'
+import type { ServerResponse, IncomingMessage, OutgoingHttpHeaders } from 'node:http'
 
 import type { Qs } from './qs.js'
 import { Redirect } from './redirect.js'
@@ -37,6 +39,9 @@ import type {
   ResponseStream,
 } from './types/response.js'
 import { ResponseStatus } from './response_status.js'
+
+type HttpServerRequest = IncomingMessage | Http2ServerRequest
+type HttpServerResponse = ServerResponse | Http2ServerResponse
 
 const CACHEABLE_HTTP_METHODS = ['GET', 'HEAD']
 
@@ -153,8 +158,8 @@ export class Response extends Macroable {
   ctx?: HttpContext
 
   constructor(
-    public request: IncomingMessage,
-    public response: ServerResponse,
+    public request: Http2ServerRequest,
+    public response: Http2ServerResponse,
     encryption: Encryption,
     config: ResponseConfig,
     router: Router,
@@ -583,7 +588,7 @@ export class Response extends Macroable {
    * Under the hood the callback is registered with
    * the "https://github.com/jshttp/on-finished" package
    */
-  onFinish(callback: (err: Error | null, response: ServerResponse) => void) {
+  onFinish(callback: (err: Error | null, response: Http2ServerResponse) => void) {
     onFinished(this.response, callback)
   }
 

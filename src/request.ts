@@ -19,13 +19,17 @@ import lodash from '@poppinss/utils/lodash'
 import { createId } from '@paralleldrive/cuid2'
 import { parse, UrlWithStringQuery } from 'node:url'
 import type { Encryption } from '@adonisjs/encryption'
-import { ServerResponse, IncomingMessage, IncomingHttpHeaders } from 'node:http'
+import type { Http2ServerRequest, Http2ServerResponse } from 'node:http2'
+import type { ServerResponse, IncomingMessage, IncomingHttpHeaders } from 'node:http'
 
 import type { Qs } from './qs.js'
 import { trustProxy } from './helpers.js'
 import { CookieParser } from './cookies/parser.js'
 import { RequestConfig } from './types/request.js'
 import type { HttpContext } from './http_context/main.js'
+
+type HttpServerRequest = IncomingMessage | Http2ServerRequest
+type HttpServerResponse = ServerResponse | Http2ServerResponse
 
 /**
  * HTTP Request class exposes the interface to consistently read values
@@ -104,8 +108,8 @@ export class Request extends Macroable {
   ctx?: HttpContext
 
   constructor(
-    public request: IncomingMessage,
-    public response: ServerResponse,
+    public request: HttpServerRequest,
+    public response: HttpServerResponse,
     encryption: Encryption,
     config: RequestConfig,
     qsParser: Qs
@@ -493,6 +497,13 @@ export class Request extends Macroable {
    */
   host(): string | null {
     let host = this.header('host')
+
+    /**
+     * For Secure connection with HTTP2
+     */
+    if (this.secure() && !host) {
+      host = this.header(':authority')
+    }
 
     /*
      * Use X-Fowarded-Host when we trust the proxy header and it
